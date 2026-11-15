@@ -1,5 +1,5 @@
 
-name: Build MT7 Keymapper APK
+name: Crie o APK do MT7 Keymapper
 
 on:
   workflow_dispatch:
@@ -8,35 +8,32 @@ on:
       - main
 
 jobs:
-  build:
+  construir:
     runs-on: ubuntu-latest
 
     steps:
       - name: Baixar código
         uses: actions/checkout@v4
 
-      - name: Configurar Java 17
+      - name: Configurar Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Configurar Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Instalar ferramentas Android
-        run: |
-          sdkmanager "platforms;android-36"
-          sdkmanager "build-tools;36.0.0"
-          sdkmanager "ndk;28.2.13676358"
-          sdkmanager "cmake;3.22.1"
+      - name: Configurar Android SDK e aceitar licenças
+        uses: android-actions/setup-android@v4
+        with:
+          accept-android-sdk-licenses: true
+          log-accepted-android-sdk-licenses: false
+          packages: 'platforms;android-36 build-tools;36.0.0 ndk;28.2.13676358 cmake;3.22.1'
 
       - name: Configurar Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
 
-      - name: Compilar e executar testes
+      - name: Compilar APK e executar testes
         run: |
           gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug
 
@@ -44,19 +41,18 @@ jobs:
         run: |
           test -f app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Enviar APK
+      - name: Disponibilizar APK
         uses: actions/upload-artifact@v4
         with:
-          name: mt7-keymapper-3.11.0-dev15-debug-apk
+          name: mt7-keymapper-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 14
 
-      - name: Enviar relatórios de testes
+      - name: Salvar relatórios de testes
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: mt7-keymapper-unit-test-reports
+          name: mt7-test-reports
           path: app/build/reports/tests/
           if-no-files-found: ignore
-          retention-days: 14
           
