@@ -20,9 +20,9 @@ jobs:
       - name: Baixar projeto
         uses: actions/checkout@v4
 
-      - name: Extrair ZIP DEV13
+      - name: Extrair ZIP DEV14
         run: |
-          unzip -q MT7_Keymapper_3.11.0-dev13_seta_propria_mt7.zip -d source
+          unzip -q MT7_Keymapper_3.11.0-dev14_correcao_bolinha_flutuante.zip -d source
           echo "PROJECT_DIR=$(find source -mindepth 1 -maxdepth 1 -type d | head -n 1)" >> "$GITHUB_ENV"
 
       - name: Configurar Java 17
@@ -50,6 +50,14 @@ jobs:
         with:
           gradle-version: '9.6.0'
 
+      - name: Corrigir dependência Lifecycle
+        run: |
+          FILE="$PROJECT_DIR/app/build.gradle.kts"
+
+          if ! grep -q 'lifecycle-runtime-android' "$FILE"; then
+            sed -i '/dependencies {/a\    implementation("androidx.lifecycle:lifecycle-runtime-android:2.11.0")' "$FILE"
+          fi
+
       - name: Executar testes e compilar APK
         run: |
           cd "$PROJECT_DIR"
@@ -58,7 +66,7 @@ jobs:
       - name: Disponibilizar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MT7-Keymapper-DEV13-APK
+          name: MT7-Keymapper-DEV14-APK
           path: source/**/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
