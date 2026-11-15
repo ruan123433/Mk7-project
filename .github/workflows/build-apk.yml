@@ -20,10 +20,28 @@ jobs:
       - name: Baixar projeto
         uses: actions/checkout@v4
 
-      - name: Extrair ZIP DEV14
+      - name: Localizar e extrair ZIP DEV14
         run: |
-          unzip -q MT7_Keymapper_3.11.0-dev14_correcao_bolinha_flutuante.zip -d source
-          echo "PROJECT_DIR=$(find source -mindepth 1 -maxdepth 1 -type d | head -n 1)" >> "$GITHUB_ENV"
+          ZIP=$(find . -maxdepth 3 -type f -name "MT7_Keymapper_3.11.0-dev14_correcao_bolinha_flutuante.zip" | head -n 1)
+
+          if [ -z "$ZIP" ]; then
+            echo "ERRO: ZIP DEV14 não encontrado na raiz do repositório."
+            find . -maxdepth 3 -type f
+            exit 1
+          fi
+
+          echo "ZIP encontrado: $ZIP"
+          mkdir -p source
+          unzip -q "$ZIP" -d source
+
+          PROJECT=$(find source -type f \( -name settings.gradle.kts -o -name settings.gradle \) | head -n 1)
+
+          if [ -z "$PROJECT" ]; then
+            echo "ERRO: Projeto Gradle não encontrado."
+            exit 1
+          fi
+
+          echo "PROJECT_DIR=$(dirname "$PROJECT")" >> "$GITHUB_ENV"
 
       - name: Configurar Java 17
         uses: actions/setup-java@v4
