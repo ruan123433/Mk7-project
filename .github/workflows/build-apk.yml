@@ -42,22 +42,24 @@ jobs:
         with:
           gradle-version: 9.6.0
 
-      - name: Extrair arquivos ZIP
-        shell: bash
+      - name: Preparar diretorio
         run: |
           mkdir -p extracted
+          rm -rf extracted/*
 
+      - name: Extrair ZIP dev18
+        shell: bash
+        run: |
           ZIP_FILE=$(find . -maxdepth 2 -type f \
-            -name "MT7-Keymapper-3.11.0-dev17-lifecycle-294-fix.zip" \
+            -name "MT7-Keymapper-3.11.0-dev18-viewtree-extension-fix.zip" \
             -print -quit)
 
           if [ -z "$ZIP_FILE" ]; then
-            echo "ERRO: ZIP dev17 nao encontrado."
-            echo "Confira se o arquivo foi enviado ao repositorio."
+            echo "ERRO: ZIP dev18 nao encontrado."
             exit 1
           fi
 
-          echo "Extraindo: $ZIP_FILE"
+          echo "ZIP encontrado: $ZIP_FILE"
           unzip -oq "$ZIP_FILE" -d extracted
 
       - name: Localizar projeto Android
@@ -69,7 +71,6 @@ jobs:
 
           if [ -z "$SETTINGS_FILE" ]; then
             echo "ERRO: settings.gradle nao encontrado."
-            echo "Confira a estrutura do ZIP dev17."
             exit 1
           fi
 
@@ -77,6 +78,16 @@ jobs:
 
           echo "Projeto encontrado em: $BUILD_DIR"
           echo "BUILD_DIR=$BUILD_DIR" >> "$GITHUB_ENV"
+
+      - name: Verificar arquivos do projeto
+        run: |
+          echo "Verificando estrutura..."
+          test -f "$BUILD_DIR/app/build.gradle.kts" || \
+          test -f "$BUILD_DIR/app/build.gradle"
+
+          test -f "$BUILD_DIR/app/src/main/java/com/mt7/keymapper/service/FloatingBallController.kt"
+
+          echo "Estrutura do projeto encontrada."
 
       - name: Compilar APK Debug
         run: |
@@ -99,7 +110,7 @@ jobs:
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MT7-Keymapper-dev17-APK
+          name: MT7-Keymapper-dev18-APK
           path: ${{ env.BUILD_DIR }}/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           
