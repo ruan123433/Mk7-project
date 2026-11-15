@@ -66,7 +66,7 @@ jobs:
             "ndk;28.2.13676358" \
             "cmake;3.22.1"
 
-      - name: Corrigir dependências Lifecycle
+      - name: Corrigir dependência ViewTreeLifecycleOwner
         run: |
           FILE="$PROJECT_DIR/app/build.gradle.kts"
 
@@ -75,16 +75,18 @@ jobs:
             exit 1
           fi
 
-          if ! grep -q 'lifecycle-runtime-android' "$FILE"; then
-            sed -i '/dependencies {/a\    implementation("androidx.lifecycle:lifecycle-runtime-android:2.8.7")' "$FILE"
+          if ! grep -q 'androidx.lifecycle:lifecycle-runtime:' "$FILE"; then
+            sed -i '/dependencies {/a\    implementation("androidx.lifecycle:lifecycle-runtime:2.8.7")' "$FILE"
           fi
 
-          if ! grep -q 'lifecycle-runtime-ktx' "$FILE"; then
-            sed -i '/dependencies {/a\    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")' "$FILE"
-          fi
-
-          echo "Dependências Lifecycle:"
+          echo "Dependências Lifecycle configuradas:"
           grep -n 'lifecycle' "$FILE" || true
+
+      - name: Verificar dependências Android
+        run: |
+          cd "$PROJECT_DIR"
+          gradle --no-daemon :app:dependencies \
+            --configuration debugCompileClasspath
 
       - name: Configurar Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -99,7 +101,9 @@ jobs:
       - name: Executar testes e compilar APK
         run: |
           cd "$PROJECT_DIR"
-          gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug
+          gradle --no-daemon \
+            :app:testDebugUnitTest \
+            :app:assembleDebug
 
       - name: Disponibilizar APK
         uses: actions/upload-artifact@v4
