@@ -41,7 +41,7 @@ jobs:
       - name: Configurar Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.13'
+          gradle-version: '9.6.0'
 
       - name: Extrair arquivos ZIP
         shell: bash
@@ -76,7 +76,7 @@ jobs:
 
           if [ -z "$SETTINGS_FILE" ]; then
             echo "ERRO: settings.gradle nao encontrado."
-            echo "Confira o ZIP e os arquivos enviados ao repositorio."
+            echo "Confira os arquivos ZIP enviados."
             exit 1
           fi
 
@@ -85,17 +85,17 @@ jobs:
           echo "Projeto encontrado em: $BUILD_DIR"
           echo "BUILD_DIR=$BUILD_DIR" >> "$GITHUB_ENV"
 
+      - name: Verificar versao do Gradle
+        run: |
+          gradle --version
+
       - name: Compilar APK
         shell: bash
         run: |
           cd "$BUILD_DIR"
 
-          if [ -f "./gradlew" ]; then
-            chmod +x ./gradlew
-            ./gradlew --no-daemon :app:assembleDebug
-          else
-            gradle --no-daemon :app:assembleDebug
-          fi
+          gradle --no-daemon \
+            :app:assembleDebug
 
       - name: Verificar APK
         shell: bash
