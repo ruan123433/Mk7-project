@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Baixar repositório
+      - name: Baixar repositorio
         uses: actions/checkout@v4
 
       - name: Configurar Java 17
@@ -23,7 +23,7 @@ jobs:
       - name: Configurar Android SDK
         uses: android-actions/setup-android@v4
 
-      - name: Aceitar licenças Android
+      - name: Aceitar licencas Android
         run: yes | sdkmanager --licenses || true
 
       - name: Instalar ferramentas Android
@@ -48,11 +48,11 @@ jobs:
           mkdir -p extracted
 
           ZIP_FILE=$(find . -maxdepth 2 -type f \
-            -name "MT7-Keymapper-3.11.0-dev16-lifecycle-fix.zip" \
+            -name "MT7-Keymapper-3.11.0-dev17-lifecycle-294-fix.zip" \
             -print -quit)
 
           if [ -z "$ZIP_FILE" ]; then
-            echo "ERRO: ZIP dev16 nao encontrado."
+            echo "ERRO: ZIP dev17 nao encontrado."
             echo "Confira se o arquivo foi enviado ao repositorio."
             exit 1
           fi
@@ -69,7 +69,7 @@ jobs:
 
           if [ -z "$SETTINGS_FILE" ]; then
             echo "ERRO: settings.gradle nao encontrado."
-            echo "Confira a estrutura do ZIP dev16."
+            echo "Confira a estrutura do ZIP dev17."
             exit 1
           fi
 
@@ -99,7 +99,7 @@ jobs:
       - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MT7-Keymapper-dev16-APK
+          name: MT7-Keymapper-dev17-APK
           path: ${{ env.BUILD_DIR }}/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           
