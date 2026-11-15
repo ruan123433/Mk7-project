@@ -1,34 +1,33 @@
 
-name: Construir APK do MT7 Keymapper
+name: MT7 Keymapper - Android Build
 
 on:
-  workflow_dispatch:
   push:
-
-permissions:
-  contents: read
+  workflow_dispatch:
 
 jobs:
-  construir:
+  build:
+    name: Compilar APK Android
     runs-on: ubuntu-latest
 
     steps:
-      - name: Baixar codigo do repositorio
+      - name: Baixar repositório
         uses: actions/checkout@v4
 
-      - name: Configurar Java
+      - name: Configurar Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: 17
 
       - name: Configurar Android SDK
         uses: android-actions/setup-android@v4
 
-      - name: Aceitar licencas e instalar componentes Android
-        run: |
-          yes | sdkmanager --licenses || true
+      - name: Aceitar licenças Android
+        run: yes | sdkmanager --licenses || true
 
+      - name: Instalar ferramentas Android
+        run: |
           sdkmanager \
             "platform-tools" \
             "platforms;android-35" \
@@ -41,42 +40,36 @@ jobs:
       - name: Configurar Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '9.6.0'
+          gradle-version: 9.6.0
 
       - name: Extrair arquivos ZIP
         shell: bash
         run: |
           mkdir -p extracted
 
-          while IFS= read -r -d '' ZIP_FILE; do
-            echo "Extraindo: $ZIP_FILE"
+          ZIP_FILE=$(find . -maxdepth 2 -type f \
+            -name "MT7-Keymapper-3.11.0-dev16-lifecycle-fix.zip" \
+            -print -quit)
 
-            ZIP_NAME=$(basename "$ZIP_FILE" .zip)
-            DEST="extracted/$ZIP_NAME"
+          if [ -z "$ZIP_FILE" ]; then
+            echo "ERRO: ZIP dev16 nao encontrado."
+            echo "Confira se o arquivo foi enviado ao repositorio."
+            exit 1
+          fi
 
-            mkdir -p "$DEST"
-            unzip -oq "$ZIP_FILE" -d "$DEST"
+          echo "Extraindo: $ZIP_FILE"
+          unzip -oq "$ZIP_FILE" -d extracted
 
-          done < <(
-            find . -type f -iname "*.zip" \
-              -not -path "./.git/*" \
-              -not -path "./extracted/*" \
-              -print0
-          )
-
-      - name: Localizar projeto Gradle
+      - name: Localizar projeto Android
         shell: bash
         run: |
-          SETTINGS_FILE=$(find . -type f \
+          SETTINGS_FILE=$(find extracted -type f \
             \( -name "settings.gradle" -o -name "settings.gradle.kts" \) \
-            -not -path "*/.git/*" \
-            -not -path "*/.gradle/*" \
-            -not -path "*/build/*" \
             -print -quit)
 
           if [ -z "$SETTINGS_FILE" ]; then
             echo "ERRO: settings.gradle nao encontrado."
-            echo "Confira os arquivos ZIP enviados."
+            echo "Confira a estrutura do ZIP dev16."
             exit 1
           fi
 
@@ -85,45 +78,28 @@ jobs:
           echo "Projeto encontrado em: $BUILD_DIR"
           echo "BUILD_DIR=$BUILD_DIR" >> "$GITHUB_ENV"
 
-      - name: Verificar versao do Gradle
-        run: |
-          gradle --version
-
-      - name: Compilar APK
-        shell: bash
+      - name: Compilar APK Debug
         run: |
           cd "$BUILD_DIR"
-
-          gradle --no-daemon \
-            :app:assembleDebug
+          gradle --no-daemon :app:assembleDebug
 
       - name: Verificar APK
         shell: bash
         run: |
-          APK_PATH="$BUILD_DIR/app/build/outputs/apk/debug"
+          APK=$(find "$BUILD_DIR/app/build/outputs/apk/debug" \
+            -type f -name "*.apk" -print -quit)
 
-          if ! find "$APK_PATH" -maxdepth 1 -type f -name "*.apk" | grep -q .; then
+          if [ -z "$APK" ]; then
             echo "ERRO: APK nao foi gerado."
             exit 1
           fi
 
-          echo "APK gerado com sucesso!"
+          echo "APK gerado: $APK"
 
-      - name: Disponibilizar APK
+      - name: Enviar APK
         uses: actions/upload-artifact@v4
         with:
-          name: MT7-Keymapper-APK
+          name: MT7-Keymapper-dev16-APK
           path: ${{ env.BUILD_DIR }}/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
-          retention-days: 14
-
-      - name: Salvar relatorios de testes
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: MT7-relatorios
-          path: |
-            **/build/reports/tests/
-          if-no-files-found: ignore
-          retention-days: 7
           
