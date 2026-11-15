@@ -36,7 +36,7 @@ jobs:
           PROJECT=$(find source -type f \( -name settings.gradle.kts -o -name settings.gradle \) | head -n 1)
 
           if [ -z "$PROJECT" ]; then
-            echo "ERRO: Projeto Gradle não encontrado dentro do ZIP."
+            echo "ERRO: Projeto Gradle não encontrado."
             find source -maxdepth 4 -type f | head -n 100
             exit 1
           fi
@@ -66,7 +66,7 @@ jobs:
             "ndk;28.2.13676358" \
             "cmake;3.22.1"
 
-      - name: Corrigir dependência Lifecycle
+      - name: Corrigir dependências Lifecycle
         run: |
           FILE="$PROJECT_DIR/app/build.gradle.kts"
 
@@ -75,17 +75,26 @@ jobs:
             exit 1
           fi
 
+          if ! grep -q 'lifecycle-runtime-android' "$FILE"; then
+            sed -i '/dependencies {/a\    implementation("androidx.lifecycle:lifecycle-runtime-android:2.8.7")' "$FILE"
+          fi
+
           if ! grep -q 'lifecycle-runtime-ktx' "$FILE"; then
             sed -i '/dependencies {/a\    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")' "$FILE"
           fi
 
-          echo "Dependência Lifecycle configurada."
+          echo "Dependências Lifecycle:"
           grep -n 'lifecycle' "$FILE" || true
 
       - name: Configurar Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.0'
+
+      - name: Limpar compilação anterior
+        run: |
+          cd "$PROJECT_DIR"
+          gradle --no-daemon clean
 
       - name: Executar testes e compilar APK
         run: |
