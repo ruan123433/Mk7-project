@@ -21,11 +21,10 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Configurar Android SDK e aceitar licenças
+      - name: Configurar Android SDK
         uses: android-actions/setup-android@v4
         with:
           accept-android-sdk-licenses: true
-          log-accepted-android-sdk-licenses: false
           packages: 'platforms;android-36 build-tools;36.0.0 ndk;28.2.13676358 cmake;3.22.1'
 
       - name: Configurar Gradle
@@ -33,26 +32,46 @@ jobs:
         with:
           gradle-version: '9.6.0'
 
-      - name: Compilar APK e executar testes
+      - name: Localizar projeto Gradle
         run: |
-          gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug
+          BUILD_DIR=$(find . -type f \
+            \( -name settings.gradle -o -name settings.gradle.kts \) \
+            -not -path '*/.gradle/*' \
+            -printf '%h\n' | head -n 1)
+
+          if [ -z "$BUILD_DIR" ]; then
+            echo "ERRO: settings.gradle não encontrado."
+            echo "Confira se os arquivos do projeto foram enviados ao GitHub."
+            exit 1
+          fi
+
+          echo "Projeto encontrado em: $BUILD_DIR"
+          echo "BUILD_DIR=$BUILD_DIR" >> "$GITHUB_ENV"
+
+      - name: Compilar e testar
+        run: |
+          gradle --no-daemon \
+            -p "$BUILD_DIR" \
+            :app:testDebugUnitTest \
+            :app:assembleDebug
+
+          echo "APK_PATH=$BUILD_DIR/app/build/outputs/apk/debug/app-debug.apk" >> "$GITHUB_ENV"
 
       - name: Verificar APK
-        run: |
-          test -f app/build/outputs/apk/debug/app-debug.apk
+        run: test -f "$APK_PATH"
 
       - name: Disponibilizar APK
         uses: actions/upload-artifact@v4
         with:
           name: mt7-keymapper-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: ${{ env.APK_PATH }}
           retention-days: 14
 
-      - name: Salvar relatórios de testes
+      - name: Relatórios de testes
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mt7-test-reports
-          path: app/build/reports/tests/
+          path: '**/build/reports/tests/'
           if-no-files-found: ignore
           
